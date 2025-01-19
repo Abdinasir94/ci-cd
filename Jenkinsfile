@@ -1,60 +1,54 @@
 pipeline {
     agent any
-    environment {
-        AWS_REGION = 'eu-west-1'            // AWS region
-        AWS_ACCOUNT_ID = '790886830806' // Replace with your actual AWS Account ID
-        ECR_REPO_NAME = 'ci-cd'             // ECR Repository Name
-        IMAGE_TAG = 'latest'                // Docker image tag
-    }
     stages {
         stage('Clone Repository') {
             steps {
+                // Clone the GitHub repository
                 git branch: 'main',
-                    credentialsId: 'a0560c70-c70c-4ca5-94b2-845c30810b4',
-                    url: 'https://github.com/Abdinasir94/ci-cd.git'
+                    credentialsId: 'a0560c70-c70c-4ca5-94b2-845c30810b4',  // GitHub credentials ID
+                    url: 'https://github.com/Abdinasir94/ci-cd.git'        // Repository URL
             }
         }
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:${IMAGE_TAG}")
+                    // Build the Docker image and tag it for ECR
+                    dockerImage = docker.build("790886830806.dkr.ecr.eu-west-1.amazonaws.com/ci-cd:latest")
                 }
             }
         }
         stage('Login to AWS ECR') {
             steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: '354df2ca-2714-428a-bdbb-5be2216d180e',
-                        usernameVariable: 'AWS_ACCESS_KEY_ID',
-                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
-                    )
-                ]) {
-                    sh '''
-                    aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-                    aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-                    aws configure set default.region ${AWS_REGION}
-                    aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
-                    '''
-                }
+                sh '''
+                    # Hardcoded AWS credentials
+                    aws configure set aws_access_key_id AKIA3QJEHKLLAEOGE2WM
+                    aws configure set aws_secret_access_key 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
+                    aws configure set default.region eu-west-1
+                    # Login to AWS ECR
+                    aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin 790886830806.dkr.ecr.eu-west-1.amazonaws.com
+                '''
             }
         }
         stage('Push Docker Image to ECR') {
             steps {
                 script {
-                    docker.image("${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:${IMAGE_TAG}").push()
+                    // Push the Docker image to the ECR repository
+                    dockerImage.push()
                 }
             }
         }
         stage('Deploy to EC2') {
             steps {
-                sshagent(['6a554f5a-7c8f-42e0-9109-6c8ad9ae9c']) {
+                sshagent(['6a554f5a-7c8f-42e0-9109-6c8ad9ae9c']) {  // SSH credentials for EC2
                     sh '''
-                    ssh -o StrictHostKeyChecking=no ec2-user@<target-ec2-ip> << EOF
-                    docker pull ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:${IMAGE_TAG}
+                    ssh -o StrictHostKeyChecking=no ec2-user@52.31.190.71 << EOF
+                    # Pull the latest Docker image from ECR
+                    docker pull 790886830806.dkr.ecr.eu-west-1.amazonaws.com/ci-cd:latest
+                    # Stop and remove any existing container
                     docker stop ci-cd || true
                     docker rm ci-cd || true
-                    docker run -d --name ci-cd -p 3000:3000 ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:${IMAGE_TAG}
+                    # Run the new container on port 3000
+                    docker run -d --name ci-cd -p 3000:3000 790886830806.dkr.ecr.eu-west-1.amazonaws.com/ci-cd:latest
                     EOF
                     '''
                 }
