@@ -23,8 +23,8 @@ pipeline {
             steps {
                 sh '''
                     # Hardcoded AWS credentials (replace YOUR_AWS_ACCESS_KEY and YOUR_AWS_SECRET_KEY with actual values)
-                    aws configure set aws_access_key_id AKIA3QJEHKLLAEOGE2WM
-                    aws configure set aws_secret_access_key H9a/1uuSPsVK0N1t2chcXyyoNJJYeK8rKfS9ij7e
+                    aws configure set aws_access_key_id ################
+                    aws configure set aws_secret_access_key ##################
                     aws configure set default.region eu-west-1
                     # Login to AWS ECR
                     aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin 790886830806.dkr.ecr.eu-west-1.amazonaws.com
