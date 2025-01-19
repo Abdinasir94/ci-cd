@@ -3,7 +3,6 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                // Clone the GitHub repository
                 git branch: 'main',
                     credentialsId: 'a0560c70-c70c-4ca5-94b2-845c30810b4',  // GitHub credentials ID
                     url: 'https://github.com/Abdinasir94/ci-cd.git'        // Repository URL
@@ -12,15 +11,18 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Build the Docker image and tag it for ECR
-                    dockerImage = docker.build("790886830806.dkr.ecr.eu-west-1.amazonaws.com/ci-cd:latest")
+                    // Change directory to the folder containing the Dockerfile
+                    dir('sample-node-app') {
+                        // Build the Docker image and tag it for ECR
+                        dockerImage = docker.build("790886830806.dkr.ecr.eu-west-1.amazonaws.com/ci-cd:latest")
+                    }
                 }
             }
         }
         stage('Login to AWS ECR') {
             steps {
                 sh '''
-                    # Hardcoded AWS credentials
+                    # Hardcoded AWS credentials (replace YOUR_AWS_ACCESS_KEY and YOUR_AWS_SECRET_KEY with actual values)
                     aws configure set aws_access_key_id AKIA3QJEHKLLAEOGE2WM
                     aws configure set aws_secret_access_key H9a/1uuSPsVK0N1t2chcXyyoNJJYeK8rKfS9ij7e
                     aws configure set default.region eu-west-1
