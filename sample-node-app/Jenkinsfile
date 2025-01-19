@@ -1,0 +1,43 @@
+pipeline {
+    agent any
+    environment {
+        DOCKER_IMAGE = 'your-dockerhub-username/sample-node-app'
+    }
+    stages {
+        stage('Clone') {
+            steps {
+                git branch: 'main', url: 'https://github.com/<your-username>/sample-node-app.git'
+            }
+        }
+        stage('Build') {
+            steps {
+                script {
+                    docker.build("${DOCKER_IMAGE}:latest")
+                }
+            }
+        }
+        stage('Push') {
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', 'docker-hub-credentials-id') {
+                        docker.image("${DOCKER_IMAGE}:latest").push()
+                    }
+                }
+            }
+        }
+        stage('Deploy') {
+            steps {
+                sshagent(['ssh-credentials-id']) {
+                    sh '''
+                    ssh -o StrictHostKeyChecking=no ec2-user@<target-ec2-ip> << EOF
+                    docker pull ${DOCKER_IMAGE}:latest
+                    docker stop sample-node-app || true
+                    docker rm sample-node-app || true
+                    docker run -d --name sample-node-app -p 3000:3000 ${DOCKER_IMAGE}:latest
+                    EOF
+                    '''
+                }
+            }
+        }
+    }
+}
